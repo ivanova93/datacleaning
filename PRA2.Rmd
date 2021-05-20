@@ -218,37 +218,36 @@ Por otro lado, con el atributo Fare si podemos distinguir claramente 3 grupos de
 ```{r}
 plot(passengers$Fare)
 ```
+
+A pesar de que no se tiene evidencia para asumir que los valores son reales, alterados o erroneos, procederemos a eliminarlos. Esto se lleva acabo con la finalidad de eliminar 3 registros que alteran la distribucion de los datos y por su cantidad su eliminacion no representa una perdida significante de informacion. Para eliminar los outliers procedemos a aplicar lo siguiente:
 ```{r}
-OutVals = boxplot(passengers$Fare)$out
-
-#print outlier
-OutVals
-
-
-
-OutVals = boxplot(passengers$Fare)$out
-```
-
-
-```{r}
-#Calcular outliers mas de 2 dvs
-
-sd(passengers$Fare)
-passengers.FareOutlier <- abs(passengers$Fare) > 3
-
-#plot(passengers$Fare, pch=passengers.FareOutlier)
-
-
+#cargamos la libreria dplyr
+library(dplyr)
+#Reemplazamos nuestro dataset, donde ahora se filtraran los valores que no cumplan la condicion (los 3 registros mencionados anteriormente)
+passengers <- filter(passengers, Fare<8)
+#Ploteamos el atributo Fare del data set temporal
+plot(passengers$Fare)
 ```
 
 
 
+# Analisis de componentes
+Ahora que tenemos un data set "limpio", procederemos a analizar los atributos para determinar los componentes principales con la funcion *prcomp*. 
+
 
 ```{r}
-#passengers.pca <- prcomp(passengers[,c(1:3,5:8)],na.rn=TRUE, center = TRUE, scale = TRUE)
-#summary(passengers.pca)
+library(tidyverse)
+passengers.pca <- prcomp(passengers[,c(1,2,4,5,6,7)],na.rn=TRUE, scale = TRUE)
+passengers.pca $rotation <- -1*passengers.pca $rotation
+passengers.pca
 
 ```
 
+Como podemos observar, en el componenete PC1 y PC6 se muestra que practicamente toda la variacion se encuentra dada por el atributo PClass. En el caso del componente PC2, PC3 y PC4 la edad provee la variacion. Para el componente PC5 la variacion se encuetra determinada por el atributo SibSp. Finalmente, podemos ver que en el PC6 ademas de la edad el atributo Fare hace varia el atributo.  
 
+Para visulizar esto resultados aplicamos el siguiente comando:
+```{r}
+biplot(passengers.pca, scale = 0)
+```
 
+Como podemos observar, el atributo Pclass toma los valores mas alejados en el eje de la  PC1 y por otro lado la edad en el eje Y de la PC2. De esta manera se representa el emfasis que tiene cada atributo en la PCs. 
