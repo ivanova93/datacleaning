@@ -73,6 +73,29 @@ El primer paso para elaborar nuestro modelo de clasificaion es: la limpieza de l
 
 # Eliminación  de atributos 
 Para cargar los datos en un data frame compatible con nuestro entorno, leemos el fichero de tipo .csv, utilizando la función *read.csv* de R. 
+```{r}
+if(!require(ggplot2)){
+    install.packages('ggplot2', repos='http://cran.us.r-project.org')
+    library(ggplot2)
+}
+if(!require(ggpubr)){
+    install.packages('ggpubr', repos='http://cran.us.r-project.org')
+    library(ggpubr)
+}
+if(!require(grid)){
+    install.packages('grid', repos='http://cran.us.r-project.org')
+    library(grid)
+}
+if(!require(gridExtra)){
+    install.packages('gridExtra', repos='http://cran.us.r-project.org')
+    library(gridExtra)
+}
+if(!require(C50)){
+    install.packages('C50', repos='http://cran.us.r-project.org')
+    library(C50)
+}
+
+```
 
 ```{r message= FALSE, warning=FALSE}
 passengers<-read.csv("./train.csv",header=T,sep=",")
@@ -105,122 +128,105 @@ passengers$Name <- NULL
 passengers$Ticket <- NULL
 passengers$Cabin <- NULL
 ```
-## Normalizacion de datos
-Como se pudo observar en el apartado anterior, solo contamos con un atributo (fare) de tipo numeric, que se puede normalizar para eliminar o disminuir grandes cambios debido a la diferencia entre valores del mismo atributo.
 
-```{r}
-passengers$Fare <- scale(passengers$Fare)
-```
 ## Valores nulos
-Ahora procederemos a tratar los valores nulos. 
-Primero aplicamos el siguiente comando que nos ayudara a contabilizar los valores nulos de cada atributo:
+Ahora procederemos a tratar los valores nulos. Gracias a una inspeccion "manual" de los datos se a conseguido identificar valores nulos en el campo Age de tipo NA y valores nulos en el campo Fare de tipo "0".
+
+Aplicamos el siguiente comando que nos ayudara a contabilizar los valores nulos en cada atributo:
 
 ```{r}
+#Encuentra valos NA
 colSums(is.na(passengers))
+#Encuentra valores de tipo numeric igual a 0
+colSums(passengers == 0)
+
 ```
-Con la funcion is.na podmeos observar que el data set cuenta con varios datos vacios o nulos en el atributo Age (edad).
-Debido al alto numero de valores nulos y a su alta relevancia para el analisis, vamos a analizar de manera detenida el atributo. 
+Con la funcion *is.na* podmeos observar que el data set cuenta con varios datos vacios o nulos en el atributo Age (edad). Debido al alto numero de valores nulos y a su alta impacto en el analisis, vamos a revisar de manera detenida el atributo. 
+
 Con el siguiente comando, vamos a ordenar los valores que toma el atributo basado en el numero de apariciones en el data set.
 
-
-Como se puede observar, en la primera fila (los valores que mas se repiten), se encuentran valores en el rango de 20 a 30 años aproximadamente.
-Para poder visualizar la infomracion de manera grafica, cargamos las librearias necesarias y procedemos a plotear la informacion con el siguiente comando:
-
-
 ```{r}
-if(!require(ggplot2)){
-    install.packages('ggplot2', repos='http://cran.us.r-project.org')
-    library(ggplot2)
-}
-if(!require(ggpubr)){
-    install.packages('ggpubr', repos='http://cran.us.r-project.org')
-    library(ggpubr)
-}
-if(!require(grid)){
-    install.packages('grid', repos='http://cran.us.r-project.org')
-    library(grid)
-}
-if(!require(gridExtra)){
-    install.packages('gridExtra', repos='http://cran.us.r-project.org')
-    library(gridExtra)
-}
-if(!require(C50)){
-    install.packages('C50', repos='http://cran.us.r-project.org')
-    library(C50)
-}
-
+sort(table(passengers$Age), decreasing = TRUE)
 ```
 
-
-
+La primera fila representa los valores con mayor frecuencia, aqui se encuentran valores en el rango de 20 a 30 años aproximadamente.
+Para poder visualizar la infomracion de manera grafica, cargamos las librearias necesarias y procedemos a plotear la informacion con el siguiente comando:
 
 ```{r}
 
 ggplot(passengers, aes(cut(Age,10), fill = Sex)) + geom_bar()+ guides(x = guide_axis(angle = 90))+labs(x="Age", y="Pasenegers Number")
 
 ```
-Como se puede observar en el gráfico, la mayor parte de pasajeros se encuentra distribuido en edades que van desde los 16.3 años hasta los 32.3. Ademas, podemos apreciar, el numero de hombres y mujeres mantiene la misma proporcion en los todos intervalos. Por esta razon, se procede a llenar los datos faltantes del atibuto edad con valores random en el intervalo con mayor numero de pasajeros, sin distincion si es hombre o mujer. 
-
-Para reemplazar los valores nullos, primero creamos una columna con todos los valores 
+Como se puede observar en el gráfico, la mayor parte de pasajeros se encuentra distribuido en edades que van desde los 16.3 años hasta los 32.3. Ademas, podemos apreciar que el numero de hombres y mujeres mantienen una relacion de proporcion en todos los intervalos. Por esta razon, se procede a llenar los datos faltantes del atibuto edad con valores aleatorios obtenidos del mismo data set, sin distincion si es hombre o mujer. Para esto se ejecuta el siguiente comando:
 
 ```{r}
-set.seed(873465)  
+#Se fija una semilla para que el trabajo se pueda repetir sin alterar los resultados
+set.seed(873465)
+#Guardamos el atributo edad para comparar la distribucion una vez que los valores nulos sean reemplazados.
 tmpAge <- passengers$Age
+#Creamos una variable que contenga todas las edades de los pasajeros 
 tmp <- passengers$Age[!is.na(passengers$Age)]  
-
-
+#Reemplazamos los valores nulos con un valor aleatorio de nuestra variable tmp.
 passengers$Age[is.na(passengers$Age)]  <- sample(tmp, size = 177, replace = FALSE) 
 
 ```
 
+Una vez reemplazados los valores procedemos a graficarlos para comparar los resultados y verificar si hubo alguna alteracion significativa en la distribucion de datos. 
+```{r}
+plotAfter <- ggplot(passengers, aes(cut(Age,10), fill = Sex)) + geom_bar()+ guides(x = guide_axis(angle = 90))+labs(x="Age", y="Pasenegers Number")
+plotBefore <- ggplot(passengers, aes(cut(tmpAge,10), fill = Sex)) + geom_bar()+ guides(x = guide_axis(angle = 90))+labs(x="Age", y="Pasenegers Number")
+grid.arrange(plotBefore,plotAfter,ncol=2)
 
+```
+Como se puede observar en el grafico derecho, despues de la asignacion de valores, ya no existen valores nulos. Ademas, a pesar del alto numero de valores nulos con el metodo aplicado la diferencia en la distribucion de edades es minima. 
+
+Ahora procedemos a analizar el atributo fare. Como se calculó en el apartado anterior, existen 15 valores del atributo fare que son 0. Para reemplazar este valor, vamos a calcular la mediana de los demas registros. 
+
+```{r}
+tmpFare <- passengers$Fare[passengers$Fare !=0]
+summary(tmpFare)
+passengers$Fare[passengers$Fare==0]  <- median(tmpFare)
+summary(passengers$Fare)
+```
+Como se puede observar, el reemplazo de valores apenas afecta la media global del data set 
+
+## Normalizacion de datos
+Ahora procedemos a normalizar los atributos. Como se pudo observar en el apartado anterior, solo el atributo fare es de tipo numeric, que se normalizará con la finalidad de eliminar o disminuir grandes cambios debido a la diferencia entre valores del mismo atributo.
+Para esto realizamos la siguiente operacion:
+
+```{r}
+passengers$Fare <- scale(passengers$Fare)
+```
+
+
+
+## Outliers
+En esta etapa trataremos de identificar outliers en nuestro data set. A continuacionanalizamos los atributos age y fare ya que los demos atributos son de tipo categorico. Para esto creamos un boxplot para los atributos mencionados.
 
 
 
 ```{r}
-ggplot(passengers, aes(cut(Age,10), fill = Sex)) + geom_bar()+ guides(x = guide_axis(angle = 90))+labs(x="Age", y="Pasenegers Number")
-ggplot(passengers, aes(cut(tmpAge,10), fill = Sex)) + geom_bar()+ guides(x = guide_axis(angle = 90))+labs(x="Age", y="Pasenegers Number")
-
-
-
+AgeOutliers<-boxplot(passengers$Age,main="Age")
+FareOutliers<-boxplot(passengers$Fare,main="Fare")
 
 
 ```
-Ahora procedemos a normalizar el atributo que contiene la tarifa del pasajero (Passenger Fare)
-
-
-
-
-Transformacion de Box Cox
-``
-```{r}
-library(missForest)
-library(VIM)
-
-passengers.mis <- prodNA(passengers, noNA = 0.1)
-aggr(passengers.mis, numbers=TRUE, sortVars=TRUE, labels=names(passengers.mis), 
-cex.axis=.7, gap=3, ylab=c("Missing data","Pattern"))
-
-
-
-
-
-
-```
-
-oOUtliers
-
-
-```{r}
-AgeOutliers<-boxplot(passengers$Age,main="Sepal Width")
-FareOutliers<-boxplot(passengers$Fare,main="Sepal Width")
-
-
-```
+En el caso de el atributo Age podemos observar que, se considera como outlier a las personas mayores a 65 años aproximadamente. Esto se debe a que, como se menciono anteriormente, la mayoria de pasajerons tenia una edad entre 20-30 años. En este caso no se realizara ninguna operacion ya que esta informacion es real y muy importante para el analisis. 
+Por otro lado, con el atributo Fare si podemos distinguir claramente 3 grupos de outliers que a priori se pueden considerar normales. Para visualizar los registros de mejor manera ploteamos este atributo de la siguiente manera:
 
 
 ```{r}
 plot(passengers$Fare)
+```
+```{r}
+OutVals = boxplot(passengers$Fare)$out
+
+#print outlier
+OutVals
+
+
+
+OutVals = boxplot(passengers$Fare)$out
 ```
 
 
