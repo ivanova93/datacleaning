@@ -57,6 +57,12 @@ library(tidyverse)
 library(nortest)
 library(ResourceSelection)
 library(pROC)
+library(caret)
+#install.packages('e1071', dependencies=TRUE)
+library(rpart)
+library(rpart.plot)
+library(randomForest)
+library(tictoc)
 ```
 
 
@@ -87,7 +93,7 @@ El data set cuenta con 12 atributos que ayudan a describir a cada pasajero:
 
 
 ## Importancia y objetivos de los análisis
-Tomando en cuenta la informacion que nos provee el data set, el siguiente trabajo tratará de desarrollar un modelo de clasificacion supervisado XXXXXXXXX, que nos ayudará a predecir si un pasajero sobrevivió o no al hundimiento del Titanic, basado en sus atributos.
+Tomando en cuenta la informacion que nos provee el data set, el siguiente trabajo tratará de desarrollar tres modelos supervisados(Arbol de Decisión, Regresió logística y xxxxxx) , que nos ayudará a predecir si un pasajero sobrevivió o no al hundimiento del Titanic, basado en sus atributos.
 Este modelo nos ayudara a ratificar o contrastar las diferentes hipotesis que se deprenden en el analisis visual de los datos. 
 
 # Limpieza de los datos
@@ -306,105 +312,173 @@ Para esta última prueba también el valor de p es menor a 0.05.
 
 Después de relizar los 3 tests de normalidad, existe suficiente evidencia estadística para confirmar que los datos de la variable Age no tienen una distribución normal sino uniforme.
 
-## 4.3. Aplicación de pruebas estadísticas para comparar los grupos de datos. En función 
-de los datos y el objetivo del estudio, aplicar pruebas de contraste de hipótesis, 
-correlaciones, regresiones, etc. Aplicar al menos tres métodos de análisis 
-diferentes
-
-
-## Árbol de Decisión:
-Primero vamos a crear un modelo a partir de clasificación por arbol de decisión.
-Primero, se crean dos datasets, uno de entrenamiento y otro de prueba. El conjunto de entrenamiento es el subconjunto del conjunto original de datos utilizado para construir un primer modelo; y el conjunto de prueba, el subconjunto del conjunto original de datos utilizado para evaluar la calidad del modelo. Se empleara la proporcion mas utilizada: 2/3 para el conjunto de entrenamiento y 1/3, para el conjunto de prueba.
-
-Se empleara como variable de clasificación el atributo “Survived":
-
 ```{r}
-set.seed(666)
-y <- passengers[,1] 
-X <- passengers[,2:5] 
+###passengers$Age <- log(passengers$Age)
 ```
 
-Selección de subconjuntos donde podemos crear directamente un rango:
+
+
+
+
+## 4.3. Aplicación de pruebas estadísticas para comparar los grupos de datos. En función de los datos y el objetivo del estudio, aplicar pruebas de contraste de hipótesis, correlaciones, regresiones, etc. Aplicar al menos tres métodos de análisis diferentes
+
+Primero creamos nuestros datasets de entrenamiento y test con una relación de 80% y 20% respectivamente
 ```{r}
-indexes = sample(1:nrow(passengers), size=floor((2/3)*nrow(passengers)))
-trainX<-X[indexes,]
-trainy<-y[indexes]
-testX<-X[-indexes,]
-testy<-y[-indexes]
+train<-passengers[1:710,]
+test<-passengers[711:888,]
 ```
 
-Se crea el árbol de decisión usando los datos de entrenamiento:
-```{r}
-trainy = as.factor(trainy)
-model_3<- C50::C5.0(trainX, trainy)
-summary(model_3)
-```
 
-## Regresión Logística Simple con variables explicativa cualitativa
-Ahora vamos a realizar un modelo de regresión logística binomial entre solo dos atributos, el atributo dependiente para este caso es Survived porque nos interesa predecir quienes fueron los que sobrevivieron y como variable explicativa el género de las personas
-
+## Modelo de Regresión Logística Multiple con variables explicativas cualitativas y cuantitativas:
+Se realizará una Regresión Logística, donde usaremos los datasets de entrenamiento y prueba creados anteriormente y como variable de clasificación el atributo “Survived":
 ```{r}
-logmodel_1 <- glm(formula=Survived~Pclass, data=passengers, family=binomial)
+logmodel_1 <- glm(formula=Survived~Pclass+Sex+Fare+Age, data=train, family=binomial)
 summary(logmodel_1)
 ```
-
-## Regresión Logística Multiple con variables explicativas cualitativas y cuantitativas:
+Se realizan las predicciones con las cuales posteriormente se evaluará la eficacia del modelo:
 ```{r}
-logmodel_2 <- glm(formula=Survived~Pclass+Sex+Fare+Age, data=passengers, family=binomial)
-summary(logmodel_2)
+predicciones = predict(logmodel_1, test)
 ```
 
 
+## Modelo de Arbol de Decisión:
+
+Para este modelo vamos a usar los mismos atributos aplicados al modelo regresión logística. Se emplearán los mismos datasets de entrenamiento y prueba aplicados al modelo anterior
+```{r}
+# Creación del modelo
+model_2 <-rpart(formula=Survived~Pclass+Sex+Fare+Age, data=train)
+summary(model_2)
+```
+
+Ahora realizamos las predicciones para evaluar el árbol a futuro:
+```{r}
+predicciones2 <- predict(model_2, test)
+```
+
+## Modelo de Random Forest
+Con este modelo se generan múltiples árboles. Cada árbol entrega classificación (vota por un atributo). Y el resultado es la atributo con mayor número de votos en todo el bosque (forest)
+
+```{r message= FALSE, warning=FALSE}
+newdat <- Survived ~ Pclass + Sex + Age+Fare
+model_3 <- randomForest(newdat, data = train, importance=TRUE, ntree=2000)
+```
+
+Ahora conoceremos las variables mas importantes segun este modelo
+```{r}
+importance(model_3)
+```
+Ahora realizamos las predicciones para evaluar el modelo Randon Forest a futuro:
+```{r}
+predicciones3 <- predict(model_3, test)
+```
 # 5. Representación de los resultados a partir de tablas y gráficas
 
 
-Cálculos de los OR para el modelo de regresión logística simple
-
+Cálculo de los OR para el modelo de regresión logística multiple:
 ```{r}
 exp(cbind(coef(logmodel_1),confint(logmodel_1)))
 ```
 
-De acuerdo a los OR obtenidos se puede decir que la clase del tiquete es un factor de protección para este modelo de regresión logística simple.
-
+De acuerdo a los OR obtenidos, se tiene evidencia estadística para afirmar que para el modelo logístico multiple no existe un unico atributo que afecte de manera crítica a este modelo.
 
 ```{r}
 plot(logmodel_1,1)
 plot(logmodel_1,2)
 ```
 
-De acuerdo a lo gráficos obtenidos se puede decir que las varianzas del modelo son constantes ya que los puntos se estan distribuyendo de manera aleatoria. A partir del gráfico cuantil-cuantil, se puede afirmar que los residuales del modelo no distribuyen normal
-```{r}
-exp(cbind(coef(logmodel_2),confint(logmodel_2)))
-```
-De acuerdo a los OR obtenidos, se tiene evidencia estadística para afirmar que para el modelo logístico multiple no existe un unico atributo que afecte de manera crítica a este modelo.
-```
-
-
-```{r}
-plot(logmodel_2,1)
-plot(logmodel_2,2)
-```
-
 Se puede inferir que las varianzas del modelo NO son constantes ya que los puntos se estan distribuyendo de manera aleatoria. A partir del gráfico cuantil-cuantil, se puede afirmar que los residuales del modelo no distribuyen normal
 
 
+## Gráfico del modelo de regresión logistíca multiple:
+Primero creamos el plano donde vamos a poner los puntos de la predicción hecha, para ello usamos la función sigmoid:
 ```{r}
-# Gráfico del árbol de decisión
-model_3<- C50::C5.0(trainX, trainy)
-plot(model_3)
+sigmoid = function(x){1/(1+exp(-x))}
+x<-seq(-5,5,0.02)
+plot(predicciones, sigmoid(predicciones),col="Green")
+
 ```
 
-
-Curvas ROC
-
+Revisamos las predicciones hechas:
 ```{r}
-prob=predict(logmodel_1, passengers, type="response")
-r=roc(passengers$Survived,prob, data=passengers)
+view(predicciones)
+```
+
+Ahora vamos a comprobar la precisión del modelo, para esto primero aproximamos los valores que se predijeron a 1 ó 0, es decir, a sobrevivió o no.
+```{r}
+newpred <- ifelse(predicciones>0.5,1,0)
+```
+
+Ahora creamos una matriz de confusión para evaluar el rendimiento del modelo de entrenamiento versus el del test.Antes se debe convertir a factor el atributo survived del test y las predicciones aproximadas:
+```{r}
+#Conversiones a factor
+test$Survived <- factor(test$Survived)
+newpred <- factor(newpred)
+# Matriz de Confusión
+confusionMatrix(newpred, test$Survived)
+```
+
+La precisión del modelo es 83.15%
+
+Ahora también podemos ver el comportamiento del modelo en un Curva ROC, otra medida para evaluar un modelo logístico:
+`````{r}
+## Curva ROC:
+prob=predict(logmodel_1, train, type="response")
+r=roc(train$Survived,prob, data=train)
 plot(r, col="red", print.auc=TRUE)
-prob2=predict(logmodel_2, passengers, type="response")
-r2=roc(passengers$Survived,prob2, data=passengers)
-plot(r2, col="green", print.auc=TRUE, add=TRUE, print.auc.x=0.95)
-prob3=predict(model_3, passengers, type="response")
-r3=roc(passengers$Survived,prob3, data=passengers)
 ```
+
+Entre más se acerque la curva a 1 mejor es el modelo. Para este caso aunque no es perfecto el modelo comprende la mayor parte del área bajo la curva
+
+## Gráfico del árbol de decisión
+
+Vamos a realizar el gráfico y a comprobar la precisión del modelo, para esto primero aproximamos los valores que se predijeron a 1 ó 0, es decir, a sobrevivió o no.
+```{r}
+# Aproximación de los valores predecidos
+newpred_model2 <- ifelse(predicciones2>0.5,1,0)
+# vista de las nueva predicción
+View(newpred_model2)
+```
+
+Ahora graficamos el modelo:
+```{r}
+rpart.plot(model_2)
+```
+
+
+Ahora creamos una matriz de confusión para evaluar el rendimiento del modelo de entrenamiento versus el del test.Antes se debe convertir a factor las predicciones aproximadas:
+```{r}
+#Conversiones a factor
+newpred_model2 <- factor(newpred_model2)
+test$Survived <- factor(test$Survived)
+# Matriz de Confusión
+confusionMatrix(newpred_model2, test$Survived)
+```
+Como podemos observar el modelo de árbol de decisión tiene una precisión mas alta que le de regresió logística, esta es de 84.27%.
+
+
+## Random Forest
+Vamos a visualizar la importancia de las variables según este modelo:
+```{r}
+varImpPlot(model_3, main = "RF: Importancia de las Variables")
+```
+
+Se puede ver que para este modelo prima el Sexo, luego la clase, luego el costo del tiquete y después la edad
+
+Ahora vamos  a comprobar la precisión del modelo, para esto primero aproximamos los valores que se predijeron a 1 ó 0, es decir, a sobrevivió o no.
+```{r}
+# Aproximación de los valores predecidos
+newpred_model3 <- ifelse(predicciones3>0.5,1,0)
+```
+
+Ahora creamos una matriz de confusión para evaluar el rendimiento del modelo de entrenamiento versus el del test.Antes se debe convertir a factor el atributo survived del test y las predicciones aproximadas:
+```{r}
+#Conversiones a factor
+test$Survived <- factor(test$Survived)
+newpred_model3 <- factor(newpred_model3)
+# Matriz de Confusión
+confusionMatrix(newpred_model3, test$Survived)
+```
+De acuerdo a los resultados obtenidos, el modelo que mejor explica la supervivencia en el Titanic es Random Forest con 84,83%.
+
+## 6. Resolución del problema. A partir de los resultados obtenidos, ¿cuáles son las conclusiones? ¿Los resultados permiten responder al problema?
 
