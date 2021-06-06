@@ -1,6 +1,6 @@
 ---
 title: 'Tipología y ciclo de vida de los datos: PRA2 - Limpieza y análisis de datos'
-author: "Autor: Giovanny Caluña y Ivan Ovalle"
+author: "Autor: Giovanny Caluña e Ivan Ovalle"
 date: "Mayo 2021"
 output:
   pdf_document:
@@ -45,12 +45,33 @@ Las competencias que se desarrollan son:
 - Capacidad de analizar un problema en el nivel de abstracción adecuado a cada situación y aplicar las habilidades y conocimientos adquiridos para abordarlo y resolverlo.
 - Capacidad para aplicar las técnicas específicas de tratamiento de datos (integración, transformación, limpieza y validación) para su posterior análisis.
 
+```{r}
+# Se cargan las librerías a usar:
+library(ggplot2)
+library(ggpubr)
+library(grid)
+library(gridExtra)
+library(C50)
+library(dplyr)
+library(tidyverse)
+library(nortest)
+library(ResourceSelection)
+library(pROC)
+```
 
-# Desarrollo
 
-## Descripción del dataset
-Para el desarrollo de este proyecto se seleccionó el data set llamado: Titanic: Machine Learning. Obtenido de: (https://www.kaggle.com/c/titanic). El data set cuenta con la informacion de diferentes tripulantes que estuvieron en el Titanic el dia de su hundimineto. 
+# 1. Descripción del dataset
+Para el desarrollo de este proyecto se seleccionó el data set llamado: Titanic: Machine Learning. Obtenido de: (https://www.kaggle.com/c/titanic). El data set cuenta con la informacion de diferentes tripulantes que estuvieron en el Titanic el dia de su hundimineto.
+
+## Lectura del fichero
+Para cargar los datos en un data frame compatible con nuestro entorno, leemos el fichero de tipo .csv, utilizando la función *read.csv* de R. 
+
+```{r message= FALSE, warning=FALSE}
+passengers<-read.csv("./train.csv",header=T,sep=",")
+```
+
 El data set cuenta con 12 atributos que ayudan a describir a cada pasajero:
+
 - PassengerID: Id del pasajero registrado.
 - Survived: Si el pasajero sobrevivió o no al incidente(0 = No, 1 = Si).
 - Pclass: Clase del ticket abordo del Titanic. Ej: 1,2 o 3.
@@ -64,7 +85,8 @@ El data set cuenta con 12 atributos que ayudan a describir a cada pasajero:
 - Cabin: Número de cabina abordo del titanic.
 - Embarked: Puerto de embarcación (C = Cherbourg, Q = Queenstown, S = Southampton)
 
-# Importancia y objetivos de los análisis
+
+## Importancia y objetivos de los análisis
 Tomando en cuenta la informacion que nos provee el data set, el siguiente trabajo tratará de desarrollar un modelo de clasificacion supervisado XXXXXXXXX, que nos ayudará a predecir si un pasajero sobrevivió o no al hundimiento del Titanic, basado en sus atributos.
 Este modelo nos ayudara a ratificar o contrastar las diferentes hipotesis que se deprenden en el analisis visual de los datos. 
 
@@ -72,39 +94,11 @@ Este modelo nos ayudara a ratificar o contrastar las diferentes hipotesis que se
 El primer paso para elaborar nuestro modelo de clasificaion es: la limpieza de los datos. En esta etapa vamos a aplicar las diferentes tecnicas de limpieza de datos que nos perimitirá corregir posibles inconsistencias, valores nulos y atributos innecesarios.
 
 # Eliminación  de atributos 
-Para cargar los datos en un data frame compatible con nuestro entorno, leemos el fichero de tipo .csv, utilizando la función *read.csv* de R. 
-```{r}
-if(!require(ggplot2)){
-    install.packages('ggplot2', repos='http://cran.us.r-project.org')
-    library(ggplot2)
-}
-if(!require(ggpubr)){
-    install.packages('ggpubr', repos='http://cran.us.r-project.org')
-    library(ggpubr)
-}
-if(!require(grid)){
-    install.packages('grid', repos='http://cran.us.r-project.org')
-    library(grid)
-}
-if(!require(gridExtra)){
-    install.packages('gridExtra', repos='http://cran.us.r-project.org')
-    library(gridExtra)
-}
-if(!require(C50)){
-    install.packages('C50', repos='http://cran.us.r-project.org')
-    library(C50)
-}
 
-```
-
-```{r message= FALSE, warning=FALSE}
-passengers<-read.csv("./train.csv",header=T,sep=",")
-```
-Ahora utilizaremos la funcion *sapply*, que nos proporcionará el tipo de dato que maneja cada atributo.
+Utilizaremos la funcion *sapply*, que nos proporcionará el tipo de dato que maneja cada atributo.
 
 ```{r}
 sapply(passengers, function(x) class(x))
-
 ```
 Como podemos observar en la tabla superior, en nuestro data set podemos encontrar 3 tipos de datos: integer, character y numeric. 
 Ahora procedemos a utilizar la funcion *summary* que nos ayudará con datos estadisticos generales de cada atributo.
@@ -112,14 +106,14 @@ Ahora procedemos a utilizar la funcion *summary* que nos ayudará con datos esta
 ```{r}
 summary(passengers)
 ```
-Como podemos observar, se obtiene la el minimo, la media y la mediana de todos los atributos de tipo integer y numeric. Ademas, en el atributo Age (Edad del pasajero) podemos observar un campo extra llamado NA´s. Este dato nos indica el numero de valores nulos o vacios que contienes este campo, en este caso 177.
+Como podemos observar, se obtiene el mínimo, la media y la mediana de todos los atributos de tipo integer y numeric. Ademas, en el atributo Age (Edad del pasajero) podemos observar un campo extra llamado NA´s. Este dato nos indica el numero de valores nulos o vacios que contienes este campo, en este caso 177.
 
 Para la eliminacion de atributos innecesarios utilizaremos la funcion *str* de R que nos dara diferente ejemplos de cada atributo asi como su formato.
 
 ```{r}
 str(passengers)
 ```
-El primer atributo que se eliminará es: Passenger Id. Este atributo nos indica un numero asignado de manera incremetal a cada passajero por lo que no nos aporta informacion relevante para el analisi y entrenamiento del modelo.  El segundo atributo eliminado será Name, este atributo de tipo character al ser diferente para cada pasajero, no proporciona informacion util para la clasificacion. De la misma manera, el atributo ticket, da un valor alfanumerico especifico para cada pasajero por lo que tambien se eliminará. Por ultimo, despues de un analisis visual sobre el data set, se detecto un alto numero de valores nulos sobre el campo Cabin y los pocos registros con los que se cuenta dan un valor especifico por pasajero. 
+El primer atributo que se eliminará es: Passenger Id. Este atributo nos indica un numero asignado de manera incremetal a cada pasajero por lo que no nos aporta informacion relevante para el analisis y entrenamiento del modelo.  El segundo atributo eliminado será Name, este atributo de tipo character al ser diferente para cada pasajero, no proporciona informacion util para la clasificacion. De la misma manera, el atributo ticket, da un valor alfanumerico especifico para cada pasajero por lo que tambien se eliminará. Por ultimo, despues de un analisis visual sobre el data set, se detecto un alto numero de valores nulos sobre el campo Cabin y los pocos registros con los que se cuenta dan un valor especifico por pasajero. 
 Para eliminar los atributos mecionados, se procede a ejecutar lo siguiente:
 
 ```{r}
@@ -150,7 +144,7 @@ sort(table(passengers$Age), decreasing = TRUE)
 ```
 
 La primera fila representa los valores con mayor frecuencia, aqui se encuentran valores en el rango de 20 a 30 años aproximadamente.
-Para poder visualizar la infomracion de manera grafica, cargamos las librearias necesarias y procedemos a plotear la informacion con el siguiente comando:
+Para poder visualizar la informacion de manera grafica, cargamos las librearias necesarias y procedemos a plotear la informacion con el siguiente comando:
 
 ```{r}
 
@@ -199,20 +193,17 @@ passengers$Fare <- scale(passengers$Fare)
 ```
 
 
-
 ## Outliers
-En esta etapa trataremos de identificar outliers en nuestro data set. A continuacionanalizamos los atributos age y fare ya que los demos atributos son de tipo categorico. Para esto creamos un boxplot para los atributos mencionados.
+En esta etapa trataremos de identificar outliers en nuestro data set. A continuacion analizamos los atributos age y fare ya que los demos atributos son de tipo categorico. Para esto creamos un boxplot para los atributos mencionados.
 
 
 
 ```{r}
 AgeOutliers<-boxplot(passengers$Age,main="Age")
 FareOutliers<-boxplot(passengers$Fare,main="Fare")
-
-
 ```
 En el caso de el atributo Age podemos observar que, se considera como outlier a las personas mayores a 65 años aproximadamente. Esto se debe a que, como se menciono anteriormente, la mayoria de pasajerons tenia una edad entre 20-30 años. En este caso no se realizara ninguna operacion ya que esta informacion es real y muy importante para el analisis. 
-Por otro lado, con el atributo Fare si podemos distinguir claramente 3 grupos de outliers que a priori se pueden considerar normales. Para visualizar los registros de mejor manera ploteamos este atributo de la siguiente manera:
+Por otro lado, con el atributo Fare si podemos distinguir claramente 3 grupos de outliers que a priori no se pueden considerar normales. Para visualizar los registros de mejor manera ploteamos este atributo de la siguiente manera:
 
 
 ```{r}
@@ -221,8 +212,6 @@ plot(passengers$Fare)
 
 A pesar de que no se tiene evidencia para asumir que los valores son reales, alterados o erroneos, procederemos a eliminarlos. Esto se lleva acabo con la finalidad de eliminar 3 registros que alteran la distribucion de los datos y por su cantidad su eliminacion no representa una perdida significante de informacion. Para eliminar los outliers procedemos a aplicar lo siguiente:
 ```{r}
-#cargamos la libreria dplyr
-library(dplyr)
 #Reemplazamos nuestro dataset, donde ahora se filtraran los valores que no cumplan la condicion (los 3 registros mencionados anteriormente)
 passengers <- filter(passengers, Fare<8)
 #Ploteamos el atributo Fare del data set temporal
@@ -234,9 +223,7 @@ plot(passengers$Fare)
 # Analisis de componentes
 Ahora que tenemos un data set "limpio", procederemos a analizar los atributos para determinar los componentes principales con la funcion *prcomp*. 
 
-
 ```{r}
-library(tidyverse)
 passengers.pca <- prcomp(passengers[,c(1,2,4,5,6,7)],na.rn=TRUE, scale = TRUE)
 passengers.pca $rotation <- -1*passengers.pca $rotation
 passengers.pca
@@ -245,9 +232,177 @@ passengers.pca
 
 Como podemos observar, en el componenete PC1 y PC6 se muestra que practicamente toda la variacion se encuentra dada por el atributo PClass. En el caso del componente PC2, PC3 y PC4 la edad provee la variacion. Para el componente PC5 la variacion se encuetra determinada por el atributo SibSp. Finalmente, podemos ver que en el PC6 ademas de la edad el atributo Fare hace varia el atributo.  
 
-Para visulizar esto resultados aplicamos el siguiente comando:
+Para visualizar esto resultados aplicamos el siguiente comando:
 ```{r}
 biplot(passengers.pca, scale = 0)
 ```
 
 Como podemos observar, el atributo Pclass toma los valores mas alejados en el eje de la  PC1 y por otro lado la edad en el eje Y de la PC2. De esta manera se representa el emfasis que tiene cada atributo en la PCs. 
+
+
+# 4. Análisis de los datos.
+
+## 4.1 Selección de los grupos de datos que se quieren analizar/comparar (planificación de los análisis a aplicar)
+
+De acuerdo la información procesada anteriormente y en especial al PCA vamos a trabajar con los atributos: Survived, Pclass, Sex, Age y Fare.
+
+No vamos a trabajar con SibSp porque los datos son confusos al no aclarar específicamente si corresponden a hermanos o conyuges e igual para Parch. También para nosotros no tiene sentido evaluar el lugar de embarque porque esto no va a repercutir en el resultado final de supervivencia.
+```{r}
+passengers$SibSp <- NULL
+passengers$Parch <- NULL
+passengers$Embarked <- NULL
+```
+
+Adicionalmente, vamos a agrupar algunas variables para facilitar su comprensión al momento de ralizar pruebas de hipótesis.
+
+Separamos el genero en hombres y mujeres:
+```{r}
+passengers$hombres <- passengers$Sex == "male"
+passengers$mujeres <- passengers$Sex == "female"
+```
+
+También podemos segmentar la clase del tiquete para que a futuro nos ayude a comprender que clase social tuvo más sobrevivientes:
+
+```{r}
+passengers$Clase_Alta <- passengers$Pclass == 1
+passengers$Clase_Media <- passengers$Pclass == 2
+passengers$Clase_Baja <- passengers$Pclass == 3
+```
+
+
+## 4.2. Comprobación de la normalidad y homogeneidad de la varianza.
+
+De acuerdo con las variables con las que hemos decidido trabajar, la única a la cual se le puede evaluar la normalidad es a la de la edad "Age". Por esto mismo, no tiene sentido evaluar la homogeneidad de la varianza para solo un atributo.
+
+Ahora vamos a comprobar la normalidad de la variabale cuantitativa Age. Primero vamos a ver con un histograma como se ve la distribución de los datos:
+```{r}
+# Histograma de la Edad
+hist(passengers$Age)
+```
+Según el gráfico, aparentemente se ve un distribución uniforme pero no normal. Debido a esto y para estar totalmente seguros, vamos a aplicar 3 tests de normalidad. Para la tres pruebas se realiza el siguiente planteamiento:
+
+H0: El atributo de la Edad distribuye normal
+H1: Se rechaza la hipótesis nula si el pvalue es menor al nivel de significancia de 0.05
+
+Shapiro-Wilk:
+```{r}
+shapiro.test(passengers$Age)
+```
+
+El valor de probabilidad es menor a 0.05 por lo que podemos decir que nuestros datos NO siguen una distribución normal.
+
+Lilliefors (Kolmogorov-Smirnov)
+```{r}
+lillie.test(passengers$Age)
+```
+
+El valor de p también es menor a 0.05, por lo que podemos decir que nuestros datos NO siguen una distribución normal.
+
+Anderson-Darling
+```{r}
+ad.test(passengers$Age)
+```
+Para esta última prueba también el valor de p es menor a 0.05.
+
+Después de relizar los 3 tests de normalidad, existe suficiente evidencia estadística para confirmar que los datos de la variable Age no tienen una distribución normal sino uniforme.
+
+## 4.3. Aplicación de pruebas estadísticas para comparar los grupos de datos. En función 
+de los datos y el objetivo del estudio, aplicar pruebas de contraste de hipótesis, 
+correlaciones, regresiones, etc. Aplicar al menos tres métodos de análisis 
+diferentes
+
+### Regresión Logística Simple:
+Primero vamos a realizar un modelo de regresión logística binomial entre solo dos atributos, el atributo dependiente para este caso es Survived porque nos interesa predecir quienes fueron los que sobrevivieron y como variable explicativa el género de las personas
+
+```{r}
+logmodel_1 <- glm(formula=Survived~Pclass, data=passengers, family=binomial)
+summary(logmodel_1)
+```
+
+## Regresión Logística Multiple con variables explicativas cualitativas y cuantitativas:
+```{r}
+logmodel_2 <- glm(formula=Survived~Pclass+Sex+Fare+Age, data=passengers, family=binomial)
+summary(logmodel_2)
+```
+## Árbol de Decisión:
+Ahora se crean dos datasets, uno de entrenamiento y otro de prueba. El conjunto de entrenamiento es el subconjunto del conjunto original de datos utilizado para construir un primer modelo; y el conjunto de prueba, el subconjunto del conjunto original de datos utilizado para evaluar la calidad del modelo. Se empleara la proporcion mas utilizada: 2/3 para el conjunto de entrenamiento y 1/3, para el conjunto de prueba.
+
+Se empleara como variable de clasificación el atributo “Survived":
+
+```{r}
+set.seed(666)
+y <- passengers[,1] 
+X <- passengers[,2:5] 
+```
+
+Selección de subconjuntos donde podemos crear directamente un rango:
+```{r}
+indexes = sample(1:nrow(passengers), size=floor((2/3)*nrow(passengers)))
+trainX<-X[indexes,]
+trainy<-y[indexes]
+testX<-X[-indexes,]
+testy<-y[-indexes]
+```
+
+Se crea el árbol de decisión usando los datos de entrenamiento:
+```{r}
+trainy = as.factor(trainy)
+model_3<- C50::C5.0(trainX, trainy)
+summary(model_3)
+```
+
+
+
+# 5. Representación de los resultados a partir de tablas y gráficas
+
+
+Cálculos de los OR para el modelo de regresión logística simple
+
+```{r}
+exp(cbind(coef(logmodel_1),confint(logmodel_1)))
+```
+
+De acuerdo a los OR obtenidos se puede decir que la clase del tiquete es un factor de protección para este modelo de regresión logística simple.
+
+
+```{r}
+plot(logmodel_1,1)
+plot(logmodel_1,2)
+```
+
+De acuerdo a lo gráficos obtenidos se puede decir que las varianzas del modelo son constantes ya que los puntos se estan distribuyendo de manera aleatoria. A partir del gráfico cuantil-cuantil, se puede afirmar que los residuales del modelo no distribuyen normal
+```{r}
+exp(cbind(coef(logmodel_2),confint(logmodel_2)))
+```
+De acuerdo a los OR obtenidos, se tiene evidencia estadística para afirmar que para el modelo logístico multiple no existe un unico atributo que afecte de manera crítica a este modelo.
+```
+
+
+```{r}
+plot(logmodel_2,1)
+plot(logmodel_2,2)
+```
+
+Se puede inferir que las varianzas del modelo NO son constantes ya que los puntos se estan distribuyendo de manera aleatoria. A partir del gráfico cuantil-cuantil, se puede afirmar que los residuales del modelo no distribuyen normal
+
+
+```{r}
+# Gráfico del árbol de decisión
+model_3<- C50::C5.0(trainX, trainy)
+plot(model_3)
+```
+
+
+Curvas ROC
+
+```{r}
+prob=predict(logmodel_1, passengers, type="response")
+r=roc(passengers$Survived,prob, data=passengers)
+plot(r, col="red", print.auc=TRUE)
+prob2=predict(logmodel_2, passengers, type="response")
+r2=roc(passengers$Survived,prob2, data=passengers)
+plot(r2, col="green", print.auc=TRUE, add=TRUE, print.auc.x=0.95)
+prob3=predict(model_3, passengers, type="response")
+r3=roc(passengers$Survived,prob3, data=passengers)
+```
+
