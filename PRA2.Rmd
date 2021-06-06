@@ -311,21 +311,10 @@ de los datos y el objetivo del estudio, aplicar pruebas de contraste de hipótes
 correlaciones, regresiones, etc. Aplicar al menos tres métodos de análisis 
 diferentes
 
-### Regresión Logística Simple:
-Primero vamos a realizar un modelo de regresión logística binomial entre solo dos atributos, el atributo dependiente para este caso es Survived porque nos interesa predecir quienes fueron los que sobrevivieron y como variable explicativa el género de las personas
 
-```{r}
-logmodel_1 <- glm(formula=Survived~Pclass, data=passengers, family=binomial)
-summary(logmodel_1)
-```
-
-## Regresión Logística Multiple con variables explicativas cualitativas y cuantitativas:
-```{r}
-logmodel_2 <- glm(formula=Survived~Pclass+Sex+Fare+Age, data=passengers, family=binomial)
-summary(logmodel_2)
-```
 ## Árbol de Decisión:
-Ahora se crean dos datasets, uno de entrenamiento y otro de prueba. El conjunto de entrenamiento es el subconjunto del conjunto original de datos utilizado para construir un primer modelo; y el conjunto de prueba, el subconjunto del conjunto original de datos utilizado para evaluar la calidad del modelo. Se empleara la proporcion mas utilizada: 2/3 para el conjunto de entrenamiento y 1/3, para el conjunto de prueba.
+Primero vamos a crear un modelo a partir de clasificación por arbol de decisión.
+Primero, se crean dos datasets, uno de entrenamiento y otro de prueba. El conjunto de entrenamiento es el subconjunto del conjunto original de datos utilizado para construir un primer modelo; y el conjunto de prueba, el subconjunto del conjunto original de datos utilizado para evaluar la calidad del modelo. Se empleara la proporcion mas utilizada: 2/3 para el conjunto de entrenamiento y 1/3, para el conjunto de prueba.
 
 Se empleara como variable de clasificación el atributo “Survived":
 
@@ -351,6 +340,19 @@ model_3<- C50::C5.0(trainX, trainy)
 summary(model_3)
 ```
 
+## Regresión Logística Simple con variables explicativa cualitativa
+Ahora vamos a realizar un modelo de regresión logística binomial entre solo dos atributos, el atributo dependiente para este caso es Survived porque nos interesa predecir quienes fueron los que sobrevivieron y como variable explicativa el género de las personas
+
+```{r}
+logmodel_1 <- glm(formula=Survived~Pclass, data=passengers, family=binomial)
+summary(logmodel_1)
+```
+
+## Regresión Logística Multiple con variables explicativas cualitativas y cuantitativas:
+```{r}
+logmodel_2 <- glm(formula=Survived~Pclass+Sex+Fare+Age, data=passengers, family=binomial)
+summary(logmodel_2)
+```
 
 
 # 5. Representación de los resultados a partir de tablas y gráficas
