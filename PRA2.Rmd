@@ -65,9 +65,9 @@ library(randomForest)
 library(tictoc)
 ```
 
-
-# 1. Descripción del dataset
-Para el desarrollo de este proyecto se seleccionó el data set llamado: Titanic: Machine Learning. Obtenido de: (https://www.kaggle.com/c/titanic). El data set cuenta con la informacion de diferentes tripulantes que estuvieron en el Titanic el dia de su hundimineto.
+# 1. Descripción del dataset. ¿Por qué es importante y qué pregunta/problema pretende responder?
+# 1.1 Descripción del dataset
+Para el desarrollo de este proyecto se seleccionó el data set llamado: Titanic: Machine Learning. Obtenido de: (https://www.kaggle.com/c/titanic). El data set cuenta con la información de diferentes tripulantes que estuvieron en el Titanic el dia de su hundimineto.
 
 ## Lectura del fichero
 Para cargar los datos en un data frame compatible con nuestro entorno, leemos el fichero de tipo .csv, utilizando la función *read.csv* de R. 
@@ -92,16 +92,14 @@ El data set cuenta con 12 atributos que ayudan a describir a cada pasajero:
 - Embarked: Puerto de embarcación (C = Cherbourg, Q = Queenstown, S = Southampton)
 
 
-## Importancia y objetivos de los análisis
-Tomando en cuenta la informacion que nos provee el data set, el siguiente trabajo tratará de desarrollar tres modelos supervisados(Arbol de Decisión, Regresió logística y xxxxxx) , que nos ayudará a predecir si un pasajero sobrevivió o no al hundimiento del Titanic, basado en sus atributos.
-Este modelo nos ayudara a ratificar o contrastar las diferentes hipotesis que se deprenden en el analisis visual de los datos. 
+## 1.2 ¿Por qué es importante y qué pregunta/problema pretende responder?
+Tomando en cuenta la información que nos provee el data set, el siguiente trabajo desarrollará tres modelos supervisados (Árbol de Decisión, Regresión Logística y Rain Forest) para predecir si un pasajero sobrevivió o no al hundimiento del Titanic, basado en los diferentes atributos registrados para cada pasajero. Además, se comparará la precisión de los diferentes modelos. Por último, los modelos entrenados nos ayudarán a identificar los atributos que más influyeron en la supervivencia o no de un pasajero.  
 
-# Limpieza de los datos
-El primer paso para elaborar nuestro modelo de clasificaion es: la limpieza de los datos. En esta etapa vamos a aplicar las diferentes tecnicas de limpieza de datos que nos perimitirá corregir posibles inconsistencias, valores nulos y atributos innecesarios.
 
-# Eliminación  de atributos 
 
-Utilizaremos la funcion *sapply*, que nos proporcionará el tipo de dato que maneja cada atributo.
+# 2. Integración y selección de los datos de interés a analizar 
+
+Ahora utilizaremos la funcion *sapply*, que nos proporcionará el tipo de dato que maneja cada atributo del data set.
 
 ```{r}
 sapply(passengers, function(x) class(x))
@@ -112,14 +110,14 @@ Ahora procedemos a utilizar la funcion *summary* que nos ayudará con datos esta
 ```{r}
 summary(passengers)
 ```
-Como podemos observar, se obtiene el mínimo, la media y la mediana de todos los atributos de tipo integer y numeric. Ademas, en el atributo Age (Edad del pasajero) podemos observar un campo extra llamado NA´s. Este dato nos indica el numero de valores nulos o vacios que contienes este campo, en este caso 177.
+Se obtiene el mínimo, la media y la mediana de todos los atributos de tipo integer y numeric. Además, en el atributo Age (edad del pasajero) podemos observar un campo extra llamado NA´s. Este dato nos indica el numero de valores nulos o vacios que contienes este campo, en este caso 177.
 
-Para la eliminacion de atributos innecesarios utilizaremos la funcion *str* de R que nos dara diferente ejemplos de cada atributo asi como su formato.
+Para la eliminación de atributos innecesarios utilizaremos la funcion *str* de R que nos mostrará algunas muestras de cada atributo asi como su formato.
 
 ```{r}
 str(passengers)
 ```
-El primer atributo que se eliminará es: Passenger Id. Este atributo nos indica un numero asignado de manera incremetal a cada pasajero por lo que no nos aporta informacion relevante para el analisis y entrenamiento del modelo.  El segundo atributo eliminado será Name, este atributo de tipo character al ser diferente para cada pasajero, no proporciona informacion util para la clasificacion. De la misma manera, el atributo ticket, da un valor alfanumerico especifico para cada pasajero por lo que tambien se eliminará. Por ultimo, despues de un analisis visual sobre el data set, se detecto un alto numero de valores nulos sobre el campo Cabin y los pocos registros con los que se cuenta dan un valor especifico por pasajero. 
+El primer atributo que se eliminará es: Passenger Id. Este atributo nos indica un número asignado de manera incremetal a cada pasajero por lo que no nos aporta información relevante para el análisis y entrenamiento del modelo.  El segundo atributo eliminado será Name, este atributo de tipo character al ser diferente para cada pasajero, no proporciona informacion útil para la clasificación. De la misma manera, el atributo ticket, da un valor alfanumerico especifico para cada pasajero por lo que tambien se eliminará. Por ultimo, después de un análisis visual sobre el data set, se detecto un alto número de valores nulos sobre el campo Cabin y los pocos registros con los que se cuenta dan un valor específico por pasajero. 
 Para eliminar los atributos mecionados, se procede a ejecutar lo siguiente:
 
 ```{r}
@@ -128,9 +126,11 @@ passengers$Name <- NULL
 passengers$Ticket <- NULL
 passengers$Cabin <- NULL
 ```
+# 3. Limpieza de los datos
+El primer paso para elaborar nuestro modelo de clasificaion es: la limpieza de los datos. En esta etapa vamos a aplicar las diferentes técnicas de limpieza de datos que nos perimitirá corregir posibles inconsistencias, valores nulos y atributos innecesarios.
 
-## Valores nulos
-Ahora procederemos a tratar los valores nulos. Gracias a una inspeccion "manual" de los datos se a conseguido identificar valores nulos en el campo Age de tipo NA y valores nulos en el campo Fare de tipo "0".
+## 3.1 Valores nulos
+Ahora procederemos a tratar los valores nulos. Gracias a una inspeccion "manual" de los datos, se a conseguido identificar valores nulos en el campo Age de tipo NA y valores nulos en el campo Fare de tipo "0".
 
 Aplicamos el siguiente comando que nos ayudara a contabilizar los valores nulos en cada atributo:
 
@@ -143,14 +143,14 @@ colSums(passengers == 0)
 ```
 Con la funcion *is.na* podmeos observar que el data set cuenta con varios datos vacios o nulos en el atributo Age (edad). Debido al alto numero de valores nulos y a su alta impacto en el analisis, vamos a revisar de manera detenida el atributo. 
 
-Con el siguiente comando, vamos a ordenar los valores que toma el atributo basado en el numero de apariciones en el data set.
+Con el siguiente comando, vamos a ordenar los valores que toma el atributo basado en el número de apariciones en el data set.
 
 ```{r}
 sort(table(passengers$Age), decreasing = TRUE)
 ```
 
 La primera fila representa los valores con mayor frecuencia, aqui se encuentran valores en el rango de 20 a 30 años aproximadamente.
-Para poder visualizar la informacion de manera grafica, cargamos las librearias necesarias y procedemos a plotear la informacion con el siguiente comando:
+Para poder visualizar la informacion de manera grafica, cargamos las librearias necesarias y procedemos a plotear la información con el siguiente comando:
 
 ```{r}
 
@@ -190,7 +190,7 @@ summary(passengers$Fare)
 ```
 Como se puede observar, el reemplazo de valores apenas afecta la media global del data set 
 
-## Normalizacion de datos
+## 3.2 Normalizacion de datos
 Ahora procedemos a normalizar los atributos. Como se pudo observar en el apartado anterior, solo el atributo fare es de tipo numeric, que se normalizará con la finalidad de eliminar o disminuir grandes cambios debido a la diferencia entre valores del mismo atributo.
 Para esto realizamos la siguiente operacion:
 
@@ -199,7 +199,7 @@ passengers$Fare <- scale(passengers$Fare)
 ```
 
 
-## Outliers
+## 3.3  Outliers
 En esta etapa trataremos de identificar outliers en nuestro data set. A continuacion analizamos los atributos age y fare ya que los demos atributos son de tipo categorico. Para esto creamos un boxplot para los atributos mencionados.
 
 
@@ -226,7 +226,7 @@ plot(passengers$Fare)
 
 
 
-# Analisis de componentes
+## 3.4 Analisis de componentes
 Ahora que tenemos un data set "limpio", procederemos a analizar los atributos para determinar los componentes principales con la funcion *prcomp*. 
 
 ```{r}
@@ -311,13 +311,6 @@ ad.test(passengers$Age)
 Para esta última prueba también el valor de p es menor a 0.05.
 
 Después de relizar los 3 tests de normalidad, existe suficiente evidencia estadística para confirmar que los datos de la variable Age no tienen una distribución normal sino uniforme.
-
-```{r}
-###passengers$Age <- log(passengers$Age)
-```
-
-
-
 
 
 ## 4.3. Aplicación de pruebas estadísticas para comparar los grupos de datos. En función de los datos y el objetivo del estudio, aplicar pruebas de contraste de hipótesis, correlaciones, regresiones, etc. Aplicar al menos tres métodos de análisis diferentes
@@ -480,5 +473,29 @@ confusionMatrix(newpred_model3, test$Survived)
 ```
 De acuerdo a los resultados obtenidos, el modelo que mejor explica la supervivencia en el Titanic es Random Forest con 84,83%.
 
-## 6. Resolución del problema. A partir de los resultados obtenidos, ¿cuáles son las conclusiones? ¿Los resultados permiten responder al problema?
+# 6. Resolución del problema. A partir de los resultados obtenidos, ¿cuáles son las conclusiones? ¿Los resultados permiten responder al problema?
+
+Para concluir primero mencionamos que el data set contiene diferentes atributos que no son útiles para crear un modelo, por lo que fueron eliminados.Además, el data set contiene diferentes anomalías que fueron corregidas durante el proceso de limpieza de datos entre ellos: valores nulos, outliers etc.
+
+Una vez que el data set fue "limpiado" y analizado visualmente se implementaron los modelos supervisados que nos dieron los siguientes resultados: el modelo de regresión múltiple nos da una precisión de 83.15%, el árbol de decisión un 84.27% y el modelo de Random Forest un 84.83%. 
+A pesar de que este último modelo presenta una mejor precisión, los otros dos presentan medidas muy similares. Esto sumado a la poca cantidad de registros tanto para el entrenamiento como para el testeo de los modelos hace muy complicado afirmar que el Rain Forest es el modelo más óptimo. 
+
+Por otro lado, como se puede observar en el gráfico del modelo de árbol de decisión, el atributo sexo es los atributos más decisivos al momento de realizar la predicción. 
+Por ejemplo, del gráfico mencionado se puede extraer la siguiente regla de asociación: una MUJER con un ticket perteneciente a CLASE 3 tiene un 95% de sobrevivir al accidente.
+Otro atributo de gran impacto para la supervivencia de un pasajero, como era de esperarse, es la clase. A mayor clase mayor probabilidad de sobrevivir. Por ejemplo, un hombre mayor a 14 años y de clase 3 tenía un 88% de probabilidades de sobrevivir, pero si su clase era de 2 o menos, esta probabilidad era de apenas el 22%. De esta manera se demuestra que los atributos más relevantes son el sexo y la clase.    
+
+# 7. Tabla de contribuciones
+
+
+|        CONTRIBUCIONES       |             FIRMA            |
+|:---------------------------:|:----------------------------:|
+| Investigación Previa        | G.C., I.O.|
+| Redacción de las respuestas | G.C., I.O. |
+| Desarrolo Código            |G.C., I.O. |
+
+```{r}
+write.csv(passengers, "titanic_clean.csv", row.names = FALSE)
+```
+
+
 
