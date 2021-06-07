@@ -1,0 +1,501 @@
+---
+title: 'Tipología y ciclo de vida de los datos: PRA2 - Limpieza y análisis de datos'
+author: "Autor: Giovanny Caluña e Ivan Ovalle"
+date: "Mayo 2021"
+output:
+  pdf_document:
+    highlight: zenburn
+    toc: yes
+  html_document:
+    highlight: default
+    number_sections: yes
+    theme: cosmo
+    toc: yes
+    toc_depth: 2
+    includes:
+      in_header: PRA2-header.html
+  word_document: default
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Detalles de la actividad
+## Descripción
+En esta práctica se elabora un caso práctico orientado a aprender a identificar los datos 
+relevantes para un proyecto analítico y usar las herramientas de integración, limpieza, validación 
+y análisis de las mismas.
+
+## Objetivos
+Los objetivos que se persiguen mediante el desarrollo de esta actividad práctica son los
+siguientes:
+- Aprender a aplicar los conocimientos adquiridos y su capacidad de resolución de problemas en entornos nuevos o poco conocidos dentro de contextos más amplios o multidisciplinares.
+- Saber identificar los datos relevantes y los tratamientos necesarios (integración, limpieza y validación) para llevar a cabo un proyecto analítico.
+Aprender a analizar los datos adecuadamente para abordar la información contenida en los datos.
+- Identificar la mejor representación de los resultados para aportar conclusiones sobre el problema planteado en el proceso analítico.
+- Actuar con los principios éticos y legales relacionados con la manipulación de datos en función del ámbito de aplicación.
+- Desarrollar las habilidades de aprendizaje que permita continuar estudiando de un modo que tendrá que ser en gran medida autodirigido o autónomo.
+- Desarrollar la capacidad de búsqueda, gestión y uso de información y recursos en el ámbito de la ciencia de datos.
+
+
+
+## Competencias
+Las competencias que se desarrollan son:
+
+- Capacidad de analizar un problema en el nivel de abstracción adecuado a cada situación y aplicar las habilidades y conocimientos adquiridos para abordarlo y resolverlo.
+- Capacidad para aplicar las técnicas específicas de tratamiento de datos (integración, transformación, limpieza y validación) para su posterior análisis.
+
+```{r}
+# Se cargan las librerías a usar:
+library(ggplot2)
+library(ggpubr)
+library(grid)
+library(gridExtra)
+library(C50)
+library(dplyr)
+library(tidyverse)
+library(nortest)
+library(ResourceSelection)
+library(pROC)
+library(caret)
+#install.packages('e1071', dependencies=TRUE)
+library(rpart)
+library(rpart.plot)
+library(randomForest)
+library(tictoc)
+```
+
+# 1. Descripción del dataset. ¿Por qué es importante y qué pregunta/problema pretende responder?
+# 1.1 Descripción del dataset
+Para el desarrollo de este proyecto se seleccionó el data set llamado: Titanic: Machine Learning. Obtenido de: (https://www.kaggle.com/c/titanic). El data set cuenta con la información de diferentes tripulantes que estuvieron en el Titanic el dia de su hundimineto.
+
+## Lectura del fichero
+Para cargar los datos en un data frame compatible con nuestro entorno, leemos el fichero de tipo .csv, utilizando la función *read.csv* de R. 
+
+```{r message= FALSE, warning=FALSE}
+passengers<-read.csv("./train.csv",header=T,sep=",")
+```
+
+El data set cuenta con 12 atributos que ayudan a describir a cada pasajero:
+
+- PassengerID: Id del pasajero registrado.
+- Survived: Si el pasajero sobrevivió o no al incidente(0 = No, 1 = Si).
+- Pclass: Clase del ticket abordo del Titanic. Ej: 1,2 o 3.
+- Name: Nombre del pasajero.
+- Sex: Genero del pasajero. 
+- Age: Edad del pasajero.
+- SibSp: Número de hermanos o conyuges a bordo del Titanic.
+- Parch: Número de padres o niños a bordo del Titanic.
+- Ticket: Número del ticket.
+- Fare: Tarifa del pasajero (costo del ticket).
+- Cabin: Número de cabina abordo del titanic.
+- Embarked: Puerto de embarcación (C = Cherbourg, Q = Queenstown, S = Southampton)
+
+
+## 1.2 ¿Por qué es importante y qué pregunta/problema pretende responder?
+Tomando en cuenta la información que nos provee el data set, el siguiente trabajo desarrollará tres modelos supervisados (Árbol de Decisión, Regresión Logística y Rain Forest) para predecir si un pasajero sobrevivió o no al hundimiento del Titanic, basado en los diferentes atributos registrados para cada pasajero. Además, se comparará la precisión de los diferentes modelos. Por último, los modelos entrenados nos ayudarán a identificar los atributos que más influyeron en la supervivencia o no de un pasajero.  
+
+
+
+# 2. Integración y selección de los datos de interés a analizar 
+
+Ahora utilizaremos la funcion *sapply*, que nos proporcionará el tipo de dato que maneja cada atributo del data set.
+
+```{r}
+sapply(passengers, function(x) class(x))
+```
+Como podemos observar en la tabla superior, en nuestro data set podemos encontrar 3 tipos de datos: integer, character y numeric. 
+Ahora procedemos a utilizar la funcion *summary* que nos ayudará con datos estadisticos generales de cada atributo.
+
+```{r}
+summary(passengers)
+```
+Se obtiene el mínimo, la media y la mediana de todos los atributos de tipo integer y numeric. Además, en el atributo Age (edad del pasajero) podemos observar un campo extra llamado NA´s. Este dato nos indica el numero de valores nulos o vacios que contienes este campo, en este caso 177.
+
+Para la eliminación de atributos innecesarios utilizaremos la funcion *str* de R que nos mostrará algunas muestras de cada atributo asi como su formato.
+
+```{r}
+str(passengers)
+```
+El primer atributo que se eliminará es: Passenger Id. Este atributo nos indica un número asignado de manera incremetal a cada pasajero por lo que no nos aporta información relevante para el análisis y entrenamiento del modelo.  El segundo atributo eliminado será Name, este atributo de tipo character al ser diferente para cada pasajero, no proporciona informacion útil para la clasificación. De la misma manera, el atributo ticket, da un valor alfanumerico especifico para cada pasajero por lo que tambien se eliminará. Por ultimo, después de un análisis visual sobre el data set, se detecto un alto número de valores nulos sobre el campo Cabin y los pocos registros con los que se cuenta dan un valor específico por pasajero. 
+Para eliminar los atributos mecionados, se procede a ejecutar lo siguiente:
+
+```{r}
+passengers$PassengerId<- NULL
+passengers$Name <- NULL
+passengers$Ticket <- NULL
+passengers$Cabin <- NULL
+```
+# 3. Limpieza de los datos
+El primer paso para elaborar nuestro modelo de clasificaion es: la limpieza de los datos. En esta etapa vamos a aplicar las diferentes técnicas de limpieza de datos que nos perimitirá corregir posibles inconsistencias, valores nulos y atributos innecesarios.
+
+## 3.1 Valores nulos
+Ahora procederemos a tratar los valores nulos. Gracias a una inspeccion "manual" de los datos, se a conseguido identificar valores nulos en el campo Age de tipo NA y valores nulos en el campo Fare de tipo "0".
+
+Aplicamos el siguiente comando que nos ayudara a contabilizar los valores nulos en cada atributo:
+
+```{r}
+#Encuentra valos NA
+colSums(is.na(passengers))
+#Encuentra valores de tipo numeric igual a 0
+colSums(passengers == 0)
+
+```
+Con la funcion *is.na* podmeos observar que el data set cuenta con varios datos vacios o nulos en el atributo Age (edad). Debido al alto numero de valores nulos y a su alta impacto en el analisis, vamos a revisar de manera detenida el atributo. 
+
+Con el siguiente comando, vamos a ordenar los valores que toma el atributo basado en el número de apariciones en el data set.
+
+```{r}
+sort(table(passengers$Age), decreasing = TRUE)
+```
+
+La primera fila representa los valores con mayor frecuencia, aqui se encuentran valores en el rango de 20 a 30 años aproximadamente.
+Para poder visualizar la informacion de manera grafica, cargamos las librearias necesarias y procedemos a plotear la información con el siguiente comando:
+
+```{r}
+
+ggplot(passengers, aes(cut(Age,10), fill = Sex)) + geom_bar()+ guides(x = guide_axis(angle = 90))+labs(x="Age", y="Pasenegers Number")
+
+```
+Como se puede observar en el gráfico, la mayor parte de pasajeros se encuentra distribuido en edades que van desde los 16.3 años hasta los 32.3. Ademas, podemos apreciar que el numero de hombres y mujeres mantienen una relacion de proporcion en todos los intervalos. Por esta razon, se procede a llenar los datos faltantes del atibuto edad con valores aleatorios obtenidos del mismo data set, sin distincion si es hombre o mujer. Para esto se ejecuta el siguiente comando:
+
+```{r}
+#Se fija una semilla para que el trabajo se pueda repetir sin alterar los resultados
+set.seed(873465)
+#Guardamos el atributo edad para comparar la distribucion una vez que los valores nulos sean reemplazados.
+tmpAge <- passengers$Age
+#Creamos una variable que contenga todas las edades de los pasajeros 
+tmp <- passengers$Age[!is.na(passengers$Age)]  
+#Reemplazamos los valores nulos con un valor aleatorio de nuestra variable tmp.
+passengers$Age[is.na(passengers$Age)]  <- sample(tmp, size = 177, replace = FALSE) 
+
+```
+
+Una vez reemplazados los valores procedemos a graficarlos para comparar los resultados y verificar si hubo alguna alteracion significativa en la distribucion de datos. 
+```{r}
+plotAfter <- ggplot(passengers, aes(cut(Age,10), fill = Sex)) + geom_bar()+ guides(x = guide_axis(angle = 90))+labs(x="Age", y="Pasenegers Number")
+plotBefore <- ggplot(passengers, aes(cut(tmpAge,10), fill = Sex)) + geom_bar()+ guides(x = guide_axis(angle = 90))+labs(x="Age", y="Pasenegers Number")
+grid.arrange(plotBefore,plotAfter,ncol=2)
+
+```
+Como se puede observar en el grafico derecho, despues de la asignacion de valores, ya no existen valores nulos. Ademas, a pesar del alto numero de valores nulos con el metodo aplicado la diferencia en la distribucion de edades es minima. 
+
+Ahora procedemos a analizar el atributo fare. Como se calculó en el apartado anterior, existen 15 valores del atributo fare que son 0. Para reemplazar este valor, vamos a calcular la mediana de los demas registros. 
+
+```{r}
+tmpFare <- passengers$Fare[passengers$Fare !=0]
+summary(tmpFare)
+passengers$Fare[passengers$Fare==0]  <- median(tmpFare)
+summary(passengers$Fare)
+```
+Como se puede observar, el reemplazo de valores apenas afecta la media global del data set 
+
+## 3.2 Normalizacion de datos
+Ahora procedemos a normalizar los atributos. Como se pudo observar en el apartado anterior, solo el atributo fare es de tipo numeric, que se normalizará con la finalidad de eliminar o disminuir grandes cambios debido a la diferencia entre valores del mismo atributo.
+Para esto realizamos la siguiente operacion:
+
+```{r}
+passengers$Fare <- scale(passengers$Fare)
+```
+
+
+## 3.3  Outliers
+En esta etapa trataremos de identificar outliers en nuestro data set. A continuacion analizamos los atributos age y fare ya que los demos atributos son de tipo categorico. Para esto creamos un boxplot para los atributos mencionados.
+
+
+
+```{r}
+AgeOutliers<-boxplot(passengers$Age,main="Age")
+FareOutliers<-boxplot(passengers$Fare,main="Fare")
+```
+En el caso de el atributo Age podemos observar que, se considera como outlier a las personas mayores a 65 años aproximadamente. Esto se debe a que, como se menciono anteriormente, la mayoria de pasajerons tenia una edad entre 20-30 años. En este caso no se realizara ninguna operacion ya que esta informacion es real y muy importante para el analisis. 
+Por otro lado, con el atributo Fare si podemos distinguir claramente 3 grupos de outliers que a priori no se pueden considerar normales. Para visualizar los registros de mejor manera ploteamos este atributo de la siguiente manera:
+
+
+```{r}
+plot(passengers$Fare)
+```
+
+A pesar de que no se tiene evidencia para asumir que los valores son reales, alterados o erroneos, procederemos a eliminarlos. Esto se lleva acabo con la finalidad de eliminar 3 registros que alteran la distribucion de los datos y por su cantidad su eliminacion no representa una perdida significante de informacion. Para eliminar los outliers procedemos a aplicar lo siguiente:
+```{r}
+#Reemplazamos nuestro dataset, donde ahora se filtraran los valores que no cumplan la condicion (los 3 registros mencionados anteriormente)
+passengers <- filter(passengers, Fare<8)
+#Ploteamos el atributo Fare del data set temporal
+plot(passengers$Fare)
+```
+
+
+
+## 3.4 Analisis de componentes
+Ahora que tenemos un data set "limpio", procederemos a analizar los atributos para determinar los componentes principales con la funcion *prcomp*. 
+
+```{r}
+passengers.pca <- prcomp(passengers[,c(1,2,4,5,6,7)],na.rn=TRUE, scale = TRUE)
+passengers.pca $rotation <- -1*passengers.pca $rotation
+passengers.pca
+
+```
+
+Como podemos observar, en el componenete PC1 y PC6 se muestra que practicamente toda la variacion se encuentra dada por el atributo PClass. En el caso del componente PC2, PC3 y PC4 la edad provee la variacion. Para el componente PC5 la variacion se encuetra determinada por el atributo SibSp. Finalmente, podemos ver que en el PC6 ademas de la edad el atributo Fare hace varia el atributo.  
+
+Para visualizar esto resultados aplicamos el siguiente comando:
+```{r}
+biplot(passengers.pca, scale = 0)
+```
+
+Como podemos observar, el atributo Pclass toma los valores mas alejados en el eje de la  PC1 y por otro lado la edad en el eje Y de la PC2. De esta manera se representa el emfasis que tiene cada atributo en la PCs. 
+
+
+# 4. Análisis de los datos.
+
+## 4.1 Selección de los grupos de datos que se quieren analizar/comparar (planificación de los análisis a aplicar)
+
+De acuerdo la información procesada anteriormente y en especial al PCA vamos a trabajar con los atributos: Survived, Pclass, Sex, Age y Fare.
+
+No vamos a trabajar con SibSp porque los datos son confusos al no aclarar específicamente si corresponden a hermanos o conyuges e igual para Parch. También para nosotros no tiene sentido evaluar el lugar de embarque porque esto no va a repercutir en el resultado final de supervivencia.
+```{r}
+passengers$SibSp <- NULL
+passengers$Parch <- NULL
+passengers$Embarked <- NULL
+```
+
+Adicionalmente, vamos a agrupar algunas variables para facilitar su comprensión al momento de ralizar pruebas de hipótesis.
+
+Separamos el genero en hombres y mujeres:
+```{r}
+passengers$hombres <- passengers$Sex == "male"
+passengers$mujeres <- passengers$Sex == "female"
+```
+
+También podemos segmentar la clase del tiquete para que a futuro nos ayude a comprender que clase social tuvo más sobrevivientes:
+
+```{r}
+passengers$Clase_Alta <- passengers$Pclass == 1
+passengers$Clase_Media <- passengers$Pclass == 2
+passengers$Clase_Baja <- passengers$Pclass == 3
+```
+
+
+## 4.2. Comprobación de la normalidad y homogeneidad de la varianza.
+
+De acuerdo con las variables con las que hemos decidido trabajar, la única a la cual se le puede evaluar la normalidad es a la de la edad "Age". Por esto mismo, no tiene sentido evaluar la homogeneidad de la varianza para solo un atributo.
+
+Ahora vamos a comprobar la normalidad de la variabale cuantitativa Age. Primero vamos a ver con un histograma como se ve la distribución de los datos:
+```{r}
+# Histograma de la Edad
+hist(passengers$Age)
+```
+Según el gráfico, aparentemente se ve un distribución uniforme pero no normal. Debido a esto y para estar totalmente seguros, vamos a aplicar 3 tests de normalidad. Para la tres pruebas se realiza el siguiente planteamiento:
+
+H0: El atributo de la Edad distribuye normal
+H1: Se rechaza la hipótesis nula si el pvalue es menor al nivel de significancia de 0.05
+
+Shapiro-Wilk:
+```{r}
+shapiro.test(passengers$Age)
+```
+
+El valor de probabilidad es menor a 0.05 por lo que podemos decir que nuestros datos NO siguen una distribución normal.
+
+Lilliefors (Kolmogorov-Smirnov)
+```{r}
+lillie.test(passengers$Age)
+```
+
+El valor de p también es menor a 0.05, por lo que podemos decir que nuestros datos NO siguen una distribución normal.
+
+Anderson-Darling
+```{r}
+ad.test(passengers$Age)
+```
+Para esta última prueba también el valor de p es menor a 0.05.
+
+Después de relizar los 3 tests de normalidad, existe suficiente evidencia estadística para confirmar que los datos de la variable Age no tienen una distribución normal sino uniforme.
+
+
+## 4.3. Aplicación de pruebas estadísticas para comparar los grupos de datos. En función de los datos y el objetivo del estudio, aplicar pruebas de contraste de hipótesis, correlaciones, regresiones, etc. Aplicar al menos tres métodos de análisis diferentes
+
+Primero creamos nuestros datasets de entrenamiento y test con una relación de 80% y 20% respectivamente
+```{r}
+train<-passengers[1:710,]
+test<-passengers[711:888,]
+```
+
+
+## Modelo de Regresión Logística Multiple con variables explicativas cualitativas y cuantitativas:
+Se realizará una Regresión Logística, donde usaremos los datasets de entrenamiento y prueba creados anteriormente y como variable de clasificación el atributo “Survived":
+```{r}
+logmodel_1 <- glm(formula=Survived~Pclass+Sex+Fare+Age, data=train, family=binomial)
+summary(logmodel_1)
+```
+Se realizan las predicciones con las cuales posteriormente se evaluará la eficacia del modelo:
+```{r}
+predicciones = predict(logmodel_1, test)
+```
+
+
+## Modelo de Arbol de Decisión:
+
+Para este modelo vamos a usar los mismos atributos aplicados al modelo regresión logística. Se emplearán los mismos datasets de entrenamiento y prueba aplicados al modelo anterior
+```{r}
+# Creación del modelo
+model_2 <-rpart(formula=Survived~Pclass+Sex+Fare+Age, data=train)
+summary(model_2)
+```
+
+Ahora realizamos las predicciones para evaluar el árbol a futuro:
+```{r}
+predicciones2 <- predict(model_2, test)
+```
+
+## Modelo de Random Forest
+Con este modelo se generan múltiples árboles. Cada árbol entrega classificación (vota por un atributo). Y el resultado es la atributo con mayor número de votos en todo el bosque (forest)
+
+```{r message= FALSE, warning=FALSE}
+newdat <- Survived ~ Pclass + Sex + Age+Fare
+model_3 <- randomForest(newdat, data = train, importance=TRUE, ntree=2000)
+```
+
+Ahora conoceremos las variables mas importantes segun este modelo
+```{r}
+importance(model_3)
+```
+Ahora realizamos las predicciones para evaluar el modelo Randon Forest a futuro:
+```{r}
+predicciones3 <- predict(model_3, test)
+```
+# 5. Representación de los resultados a partir de tablas y gráficas
+
+
+Cálculo de los OR para el modelo de regresión logística multiple:
+```{r}
+exp(cbind(coef(logmodel_1),confint(logmodel_1)))
+```
+
+De acuerdo a los OR obtenidos, se tiene evidencia estadística para afirmar que para el modelo logístico multiple no existe un unico atributo que afecte de manera crítica a este modelo.
+
+```{r}
+plot(logmodel_1,1)
+plot(logmodel_1,2)
+```
+
+Se puede inferir que las varianzas del modelo NO son constantes ya que los puntos se estan distribuyendo de manera aleatoria. A partir del gráfico cuantil-cuantil, se puede afirmar que los residuales del modelo no distribuyen normal
+
+
+## Gráfico del modelo de regresión logistíca multiple:
+Primero creamos el plano donde vamos a poner los puntos de la predicción hecha, para ello usamos la función sigmoid:
+```{r}
+sigmoid = function(x){1/(1+exp(-x))}
+x<-seq(-5,5,0.02)
+plot(predicciones, sigmoid(predicciones),col="Green")
+
+```
+
+Revisamos las predicciones hechas:
+```{r}
+view(predicciones)
+```
+
+Ahora vamos a comprobar la precisión del modelo, para esto primero aproximamos los valores que se predijeron a 1 ó 0, es decir, a sobrevivió o no.
+```{r}
+newpred <- ifelse(predicciones>0.5,1,0)
+```
+
+Ahora creamos una matriz de confusión para evaluar el rendimiento del modelo de entrenamiento versus el del test.Antes se debe convertir a factor el atributo survived del test y las predicciones aproximadas:
+```{r}
+#Conversiones a factor
+test$Survived <- factor(test$Survived)
+newpred <- factor(newpred)
+# Matriz de Confusión
+confusionMatrix(newpred, test$Survived)
+```
+
+La precisión del modelo es 83.15%
+
+Ahora también podemos ver el comportamiento del modelo en un Curva ROC, otra medida para evaluar un modelo logístico:
+`````{r}
+## Curva ROC:
+prob=predict(logmodel_1, train, type="response")
+r=roc(train$Survived,prob, data=train)
+plot(r, col="red", print.auc=TRUE)
+```
+
+Entre más se acerque la curva a 1 mejor es el modelo. Para este caso aunque no es perfecto el modelo comprende la mayor parte del área bajo la curva
+
+## Gráfico del árbol de decisión
+
+Vamos a realizar el gráfico y a comprobar la precisión del modelo, para esto primero aproximamos los valores que se predijeron a 1 ó 0, es decir, a sobrevivió o no.
+```{r}
+# Aproximación de los valores predecidos
+newpred_model2 <- ifelse(predicciones2>0.5,1,0)
+# vista de las nueva predicción
+View(newpred_model2)
+```
+
+Ahora graficamos el modelo:
+```{r}
+rpart.plot(model_2)
+```
+
+
+Ahora creamos una matriz de confusión para evaluar el rendimiento del modelo de entrenamiento versus el del test.Antes se debe convertir a factor las predicciones aproximadas:
+```{r}
+#Conversiones a factor
+newpred_model2 <- factor(newpred_model2)
+test$Survived <- factor(test$Survived)
+# Matriz de Confusión
+confusionMatrix(newpred_model2, test$Survived)
+```
+Como podemos observar el modelo de árbol de decisión tiene una precisión mas alta que le de regresió logística, esta es de 84.27%.
+
+
+## Random Forest
+Vamos a visualizar la importancia de las variables según este modelo:
+```{r}
+varImpPlot(model_3, main = "RF: Importancia de las Variables")
+```
+
+Se puede ver que para este modelo prima el Sexo, luego la clase, luego el costo del tiquete y después la edad
+
+Ahora vamos  a comprobar la precisión del modelo, para esto primero aproximamos los valores que se predijeron a 1 ó 0, es decir, a sobrevivió o no.
+```{r}
+# Aproximación de los valores predecidos
+newpred_model3 <- ifelse(predicciones3>0.5,1,0)
+```
+
+Ahora creamos una matriz de confusión para evaluar el rendimiento del modelo de entrenamiento versus el del test.Antes se debe convertir a factor el atributo survived del test y las predicciones aproximadas:
+```{r}
+#Conversiones a factor
+test$Survived <- factor(test$Survived)
+newpred_model3 <- factor(newpred_model3)
+# Matriz de Confusión
+confusionMatrix(newpred_model3, test$Survived)
+```
+De acuerdo a los resultados obtenidos, el modelo que mejor explica la supervivencia en el Titanic es Random Forest con 84,83%.
+
+# 6. Resolución del problema. A partir de los resultados obtenidos, ¿cuáles son las conclusiones? ¿Los resultados permiten responder al problema?
+
+Para concluir primero mencionamos que el data set contiene diferentes atributos que no son útiles para crear un modelo, por lo que fueron eliminados.Además, el data set contiene diferentes anomalías que fueron corregidas durante el proceso de limpieza de datos entre ellos: valores nulos, outliers etc.
+
+Una vez que el data set fue "limpiado" y analizado visualmente se implementaron los modelos supervisados que nos dieron los siguientes resultados: el modelo de regresión múltiple nos da una precisión de 83.15%, el árbol de decisión un 84.27% y el modelo de Random Forest un 84.83%. 
+A pesar de que este último modelo presenta una mejor precisión, los otros dos presentan medidas muy similares. Esto sumado a la poca cantidad de registros tanto para el entrenamiento como para el testeo de los modelos hace muy complicado afirmar que el Rain Forest es el modelo más óptimo. 
+
+Por otro lado, como se puede observar en el gráfico del modelo de árbol de decisión, el atributo sexo es los atributos más decisivos al momento de realizar la predicción. 
+Por ejemplo, del gráfico mencionado se puede extraer la siguiente regla de asociación: una MUJER con un ticket perteneciente a CLASE 3 tiene un 95% de sobrevivir al accidente.
+Otro atributo de gran impacto para la supervivencia de un pasajero, como era de esperarse, es la clase. A mayor clase mayor probabilidad de sobrevivir. Por ejemplo, un hombre mayor a 14 años y de clase 3 tenía un 88% de probabilidades de sobrevivir, pero si su clase era de 2 o menos, esta probabilidad era de apenas el 22%. De esta manera se demuestra que los atributos más relevantes son el sexo y la clase.    
+
+# 7. Tabla de contribuciones
+
+
+|        CONTRIBUCIONES       |             FIRMA            |
+|:---------------------------:|:----------------------------:|
+| Investigación Previa        | G.C., I.O.|
+| Redacción de las respuestas | G.C., I.O. |
+| Desarrolo Código            |G.C., I.O. |
+
+```{r}
+write.csv(passengers, "titanic_clean.csv", row.names = FALSE)
+```
+
+
+
